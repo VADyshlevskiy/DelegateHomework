@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net;
+using System.Threading;
 
 namespace DelegateHomework
 {
@@ -22,28 +23,44 @@ namespace DelegateHomework
                 Console.WriteLine(e.Message);
             }
 
-            Image.Download();
+            Task task = Task.Run(() =>
+            {
+                Image.Download();
+            });
 
-            Console.WriteLine("Нажмите любую клавишу для выхода");
-            Console.ReadKey();   
+            Thread.Sleep(100);
+
+            Console.WriteLine("Нажмите клавишу А для выхода или любую другую клавишу для проверки статуса скачивания");
+            while (Console.ReadKey().Key.ToString() != "F")
+                Console.WriteLine("Состояние загрузки картинки: " + Image.isStatusDownload.ToString());
+
         }
 
         public class ImageDownloader
         {
-            string remoteUri = "https://vsegda-pomnim.com/uploads/posts/2022-02/1645922176_13-vsegda-pomnim-com-p-polyarnoe-siyanie-foto-14.jpg";
+            string remoteUri = "https://img2.akspic.ru/crops/4/0/6/8/6/168604/168604-plamya-ogon-ulichnyj_fonar-gaz-teplo-7680x4320.jpg";
             string fileName = "bigimage.jpg";
 
             public event Action ImageStarted;
             public event Action ImageCompleted;
-           
+
+            public bool isStatusDownload;
+
             public void Download()
             {
-                ImageStarted?.Invoke();
                 var myWebClient = new WebClient();
+
+                ImageStarted?.Invoke();
                 Console.WriteLine("Качаю \"{0}\" из \"{1}\" .......\n", fileName, remoteUri);
-                myWebClient.DownloadFile(remoteUri, fileName);
+                var result = myWebClient.DownloadFileTaskAsync(remoteUri, fileName);
+                while (!result.IsCompleted)
+                {
+                    isStatusDownload = false;
+                }
+                isStatusDownload = true;
                 Console.WriteLine("Успешно скачал \"{0}\" из \"{1}\"", fileName, remoteUri);
                 ImageCompleted?.Invoke();
+
             }
 
             public void Subscribe()
